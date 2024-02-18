@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meeting Organizer</title>
+    <style>
+      #meeting-form {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Meeting Organizer</h1>
+
+    <!-- Listeleme -->
+    <h2>All Meetings</h2>
+    <ul id="meetings-list"></ul>
+
+    <!-- Oluşturma ve Güncelleme/Silme Formu -->
+    <form id="meeting-form">
+      <input type="hidden" id="meeting_id" name="meeting_id" />
+      <label for="meeting_subject">Meeting Subject:</label><br />
+      <input
+        type="text"
+        id="meeting_subject"
+        name="meeting_subject"
+        required
+      /><br />
+      <label for="start_time">Start Time:</label><br />
+      <input type="time" id="start_time" name="start_time" required /><br />
+      <label for="end_time">End Time:</label><br />
+      <input type="time" id="end_time" name="end_time" required /><br />
+      <label for="date">Date:</label><br />
+      <input type="date" id="date" name="date" required /><br />
+      <label for="participants">Participants (separate with comma):</label
+      ><br />
+      <input
+        type="text"
+        id="participants"
+        name="participants"
+        required
+      /><br /><br />
+      <button type="submit" id="submit-meeting-button">Create Meeting</button>
+      <button type="delete" id="delete-meeting-button">Delete Meeting</button>
+      <button type="button" id="cancel-meeting-button">Cancel</button>
+    </form>
+    <button id="create-meeting-button">Create New Meeting</button>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const API_URL = "http://localhost:8080/meetings";
+        let isUpdate = false;
+
+        function updateMeetingsList() {
+          fetch(API_URL)
+            .then((response) => {
+              if (!response.ok) {
+                console.error("Failed to fetch meetings");
+                throw new Error("Failed to fetch meetings");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              const meetingsList = document.getElementById("meetings-list");
+              meetingsList.innerHTML = "";
+
+              if (data.error) {
+                const li = document.createElement("li");
+                li.textContent = data.error;
+                meetingsList.appendChild(li);
+              } else {
+                data.meetings.forEach((meeting) => {
+                  const li = document.createElement("li");
+                  li.textContent = `${meeting.meeting_subject} - ${meeting.date} - ${meeting.start_time}-${meeting.end_time} - Katılımcılar: ${meeting.participants}`;
+                  li.addEventListener("click", () => showUpdateForm(meeting));
+                  meetingsList.appendChild(li);
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Error fetching meetings:", error.message);
+            });
+        }
+
+        updateMeetingsList();
+
+        const meetingForm = document.getElementById("meeting-form");
+        const submitButton = document.getElementById("submit-meeting-button");
+        const deleteButton = document.getElementById("delete-meeting-button");
+        const cancelButton = document.getElementById("cancel-meeting-button");
+        const createMeetingButton = document.getElementById(
+          "create-meeting-button"
+        );
+
+        function toggleMeetingForm(isVisible) {
+          if (isVisible) {
+            meetingForm.style.display = "block";
+          } else {
+            meetingForm.style.display = "none";
+          }
+        }
+
+        createMeetingButton.addEventListener("click", function () {
+          if (
+            meetingForm.style.display === "none" ||
+            meetingForm.style.display === ""
+          ) {
+            meetingForm.style.display = "block";
+            createMeetingButton.style.display = "none";
+            deleteButton.style.display = "none";
+            submitButton.textContent = "Create Meeting";
+          } else {
+            meetingForm.style.display = "none";
+          }
+        });
+
+        meetingForm.addEventListener("submit", function (event) {
+          event.preventDefault();
+          const formData = new FormData(meetingForm);
+          const meetingData = Object.fromEntries(formData.entries());
+          const meetingId = meetingData["meeting_id"];
+          delete meetingData["meeting_id"];
+
+          if (meetingData.end_time.split(":").length === 3) {
+            const [hours, minutes, second] = meetingData.end_time.split(":");
+            meetingData.end_time = hours + ":" + minutes;
+          }
+
+          if (meetingData.start_time.split(":").length === 3) {
+            const [hours, minutes, second] = meetingData.start_time.split(":");
+            meetingData.start_time = hours + ":" + minutes;
+          }
+
+          if (isUpdate) {
+            fetch(API_URL + `/${meetingId}`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(meetingData),
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error("Failed to update meeting");
+                }
+                return response.json();
+              })
+              .then(() => {
+                updateMeetingsList();
+                meetingForm.reset();
+                toggleMeetingForm(false);
+                isUpdate = false;
+              })
+              .catch((error) => {
+                console.error("Error updating meeting:", error.message);
+              });
+          } else {
+            fetch(API_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(meetingData),
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error("Failed to create meeting");
+                }
+                return response.json();
+              })
+              .then(() => {
+                updateMeetingsList();
+                meetingForm.reset();
+                toggleMeetingForm(false);
+              })
+              .catch((error) => {
+                console.error("Error creating meeting:", error.message);
+              });
+          }
+          createMeetingButton.style.display = "block";
+        });
+
+        cancelButton.addEventListener("click", function () {
+          meetingForm.reset();
+          toggleMeetingForm(false);
+          isUpdate = false;
+          createMeetingButton.style.display = "block";
+        });
+
+        deleteButton.addEventListener("click", function () {
+          event.preventDefault();
+          const formData = new FormData(meetingForm);
+          const meetingData = Object.fromEntries(formData.entries());
+
+          const meetingId = meetingData["meeting_id"];
+          fetch(API_URL + `/${meetingId}`, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Failed to delete meeting");
+              }
+              return response.json();
+            })
+            .then(() => {
+              updateMeetingsList();
+              meetingForm.reset();
+              toggleMeetingForm(false);
+              isUpdate = false;
+            })
+            .catch((error) => {
+              console.error("Error deleting meeting:", error.message);
+            });
+
+          createMeetingButton.style.display = "block";
+        });
+
+        function showUpdateForm(meeting) {
+          isUpdate = true;
+          deleteButton.style.display = "block";
+          createMeetingButton.style.display = "none";
+          toggleMeetingForm(true);
+
+          document.getElementById("meeting_id").value = meeting.id;
+          document.getElementById("meeting_subject").value =
+            meeting.meeting_subject;
+          document.getElementById("start_time").value = meeting.start_time;
+          document.getElementById("end_time").value = meeting.end_time;
+          document.getElementById("date").value = meeting.date;
+          document.getElementById("participants").value = meeting.participants;
+
+          submitButton.textContent = "Update Meeting";
+        }
+      });
+    </script>
+  </body>
+</html>
