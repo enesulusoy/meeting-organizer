@@ -20,9 +20,7 @@ def home():
 
 class MeetingView(MethodView):
     def get(self, id=None):
-        print("========== GET DATA ==========")
         if id is None:
-            print("========== FULL DATA ==========")
             page = request.args.get('page', 1, type=int)
             per_page = 10
             meetings = Meeting.query.paginate(page=page, per_page=per_page, error_out=False)
@@ -34,32 +32,31 @@ class MeetingView(MethodView):
                 "current_page": meetings.page,
                 "total_meetings": meetings.total
             }), 200
+            
         else:
-            print("========== ONE DATA ==========")
             meeting = Meeting.query.get(id)
             if not meeting:
                 return jsonify({"error": "Meeting not found"}), 404
+            
             return jsonify(meeting_schema.dump(meeting)), 200
     
     def post(self):
-        print("========== CREATE DATA ==========")
         data = request.json
         data["date"] = datetime.strptime(data['date'], '%Y-%m-%d').date()
         data["start_time"] = datetime.strptime(data['start_time'] + ':00', '%H:%M:%S').time()
         data["end_time"] = datetime.strptime(data['end_time'] + ':00', '%H:%M:%S').time()
-        print(data)
         try:
             meeting_dto = meeting_schema.load(data)
             meeting = Meeting(**meeting_dto)
             db.session.add(meeting)
             db.session.commit()
             return jsonify(meeting_schema.dump(meeting)), 201
+        
         except ValidationError as err:
             db.session.rollback()
             return jsonify({"error": str(err)}), 400
         
     def put(self, id):
-        print("========== UPDATE DATA ==========")
         meeting = Meeting.query.get(id)
         if not meeting:
             return jsonify({"error": "Meeting not found"}), 404
@@ -68,7 +65,6 @@ class MeetingView(MethodView):
         data["date"] = datetime.strptime(data['date'], '%Y-%m-%d').date()
         data["start_time"] = datetime.strptime(data['start_time'] + ':00', '%H:%M:%S').time()
         data["end_time"] = datetime.strptime(data['end_time'] + ':00', '%H:%M:%S').time()
-        print(data)
         try:
             meeting_dto = meeting_schema.load(data)
             meeting.meeting_subject = meeting_dto.get('meeting_subject', meeting.meeting_subject)
@@ -78,6 +74,7 @@ class MeetingView(MethodView):
             meeting.participants = meeting_dto.get('participants', meeting.participants)
             db.session.commit()
             return jsonify(meeting_schema.dump(meeting)), 200
+        
         except ValidationError as err:
             db.session.rollback()
             return jsonify({"error": err.messages}), 400

@@ -13,11 +13,9 @@
   <body>
     <h1>Meeting Organizer</h1>
 
-    <!-- Listeleme -->
     <h2>All Meetings</h2>
     <ul id="meetings-list"></ul>
 
-    <!-- Oluşturma ve Güncelleme/Silme Formu -->
     <form id="meeting-form">
       <input type="hidden" id="meeting_id" name="meeting_id" />
       <label for="meeting_subject">Meeting Subject:</label><br />
@@ -45,7 +43,9 @@
       <button type="delete" id="delete-meeting-button">Delete Meeting</button>
       <button type="button" id="cancel-meeting-button">Cancel</button>
     </form>
+
     <button id="create-meeting-button">Create New Meeting</button>
+
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const API_URL = "http://localhost:8080/meetings";
