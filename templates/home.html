@@ -55,8 +55,11 @@
           fetch(API_URL)
             .then((response) => {
               if (!response.ok) {
-                console.error("Failed to fetch meetings");
-                throw new Error("Failed to fetch meetings");
+                return response.json().then((data) => {
+                  const errorMessage = data.error || "Failed to fetch meetings";
+                  console.error(errorMessage);
+                  throw new Error(errorMessage);
+                });
               }
               return response.json();
             })
@@ -78,7 +81,15 @@
               }
             })
             .catch((error) => {
-              console.error("Error fetching meetings:", error.message);
+              if (error.message === "No meetings found") {
+                const meetingsList = document.getElementById("meetings-list");
+                meetingsList.innerHTML = "";
+                const li = document.createElement("li");
+                li.textContent = "No meetings found";
+                meetingsList.appendChild(li);
+              } else {
+                console.error("Error deleting/meetings:", error.message);
+              }
             });
         }
 
@@ -209,7 +220,6 @@
               updateMeetingsList();
               meetingForm.reset();
               toggleMeetingForm(false);
-              isUpdate = false;
             })
             .catch((error) => {
               console.error("Error deleting meeting:", error.message);

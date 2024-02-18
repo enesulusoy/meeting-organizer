@@ -25,7 +25,7 @@ class MeetingView(MethodView):
             per_page = 10
             meetings = Meeting.query.paginate(page=page, per_page=per_page, error_out=False)
             if not meetings.items:
-                return jsonify({"error": "No meetings found for this page"}), 404
+                return jsonify({"error": "No meetings found"}), 404
             return jsonify({
                 "meetings": meetings_schema.dump(meetings.items),
                 "total_pages": meetings.pages,
