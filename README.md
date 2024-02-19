@@ -22,6 +22,12 @@ Activate Venv:
 source venv_name/bin/activate
 ```
 
+Go to Project Directory:
+
+```
+cd meeting-organizer
+```
+
 Install Dependencies:
 
 ```
